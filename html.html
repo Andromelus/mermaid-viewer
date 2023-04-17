@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<body>
+    <pre class="mermaid" id="mermaid">
+{{CONTENT}}
+    </pre>
+    <script type="module">
+
+        var processed_edges = []
+        var clicked_node_id = null
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+        const config = {
+            startOnLoad: false,
+            flowchart: { useMaxWidth: true, htmlLabels: true },
+            securityLevel: 'strict',
+        };
+        mermaid.initialize(config);
+        await mermaid.run()
+
+        var edges = document.getElementsByClassName("flowchart-link")
+
+        var nodes = document.getElementsByClassName("node")
+
+        var find_start_edges_with_node_id = function (node_id) {
+            return document.getElementsByClassName("LS-" + node_id)
+        }
+        var find_end_edges_with_node_id = function (node_id) {
+            return document.getElementsByClassName("LE-" + node_id)
+        }
+
+        var color_edge = function (edge, color = "yellow") {
+            edge.style.stroke = color
+        }
+
+        var color_node_border = function (node, color = "yellow") {
+            let node_rect = node.getElementsByTagName("rect")
+            node_rect[0].style.stroke = color
+        }
+
+        var find_edge_destination_node_id = function (edge) {
+            let node_id = edge.getAttribute("id").split("-")[2]
+            return node_id
+        }
+
+        var find_edge_origin_node_id = function (edge) {
+            let node_id = edge.getAttribute("id").split("-")[1]
+            return node_id
+        }
+
+        var find_node_element_with_id = function (node_id) {
+            let nodes = document.getElementsByClassName("node")
+            var target_node = null
+            for (let node of nodes) {
+                let id = node.getAttribute("id")
+                if (id.split("-")[1] == node_id) {
+                    target_node = node
+                }
+            }
+            return target_node
+        }
+
+        var color_forwards_edges = function (start_edge) {
+            if (processed_edges.includes(start_edge.getAttribute("id"))) {
+                return
+            }
+            color_edge(start_edge)
+            let dest_node_id = find_edge_destination_node_id(start_edge)
+            let dest_node = find_node_element_with_id(dest_node_id)
+            processed_edges.push(start_edge.getAttribute("id"))
+            let node_id = dest_node.getAttribute("id").split("-")[1]
+            if (node_id !== clicked_node_id) {
+                color_node_border(dest_node)
+            }
+            let edges = find_start_edges_with_node_id(node_id)
+            for (let edge of edges) {
+                color_forwards_edges(edge)
+            }
+        }
+
+        var color_backwards_edges = function (end_edge) {
+            if (processed_edges.includes(end_edge.getAttribute("id"))) {
+                return
+            }
+            color_edge(end_edge)
+            let origin_node_id = find_edge_origin_node_id(end_edge)
+            let origin_node = find_node_element_with_id(origin_node_id)
+            processed_edges.push(end_edge.getAttribute("id"))
+            let node_id = origin_node.getAttribute("id").split("-")[1]
+            if (node_id !== clicked_node_id) {
+                color_node_border(origin_node)
+            }
+            let edges = find_end_edges_with_node_id(node_id)
+            for (let edge of edges) {
+                color_backwards_edges(edge)
+            }
+        }
+
+        var click_event = function () {
+            for (let edge of edges) {
+                // TODO alligner les color entre edge et node
+                edge.style.removeProperty("stroke")
+            }
+            for (let node of nodes) {
+                color_node_border(node, "")
+            }
+
+            let node_id = this.getAttribute("id").split("-")[1]
+            clicked_node_id = node_id
+            color_node_border(this, "red")
+            let start_edges = find_start_edges_with_node_id(node_id)
+            let end_edges = find_end_edges_with_node_id(node_id)
+            for (let e of start_edges) {
+                color_forwards_edges(e)
+            }
+            for (let e of end_edges) {
+                color_backwards_edges(e)
+            }
+            processed_edges = []
+            clicked_node_id = null
+        }
+
+        for (let node of nodes) {
+            node.onclick = click_event
+        }
+    </script>
+</body>
+</html>
